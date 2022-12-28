@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "feval"
+version = "0.0.1"
+authors = [
+  {name="Olivier Grognuz", email="olivier@grognuz.site"},
+]
+description = "Perform (multivariate) Diebold-Mariano and (multivariate) Giacomini-White equal (conditional) predictive ability tests along with an Model Confidence Set implementation."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/ogrnz/feval"
+"Bug Tracker" = "https://github.com/ogrnz/feval/issues"
