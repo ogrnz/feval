@@ -163,7 +163,7 @@ def mgw(L: np.array,
     Dbar = np.mean(reg, axis=0)
 
     # Compute covar matrix
-    omega = np.empty((q*p, q*p))  # Defined here to make linter happy and inform about dims
+    omega = np.empty((q * p, q * p))  # Defined here to make linter happy and inform about dims
     if covar_style == "sample":
         omega = (reg - Dbar).T @ (reg - Dbar) / (T - 1)
 
@@ -225,7 +225,7 @@ def cmcs(L: np.array, H: Optional = None, alpha: float = 0.05, **kwargs):
     T = L.shape[0]
     k = L.shape[1]
     if H is None:
-        H = np.ones((T + 1, 1))
+        H = np.ones((T, 1))
 
     # Init loop
     S, cval, pval = np.inf, 1, 1
@@ -238,9 +238,10 @@ def cmcs(L: np.array, H: Optional = None, alpha: float = 0.05, **kwargs):
         L_to_use = L[:, (mcs == 1)[0]]
 
         # Perform MGW
-        S, cval, pval = mgw(L_to_use, H[:-1, :], alpha=alpha, **kwargs)
+        S, cval, pval = mgw(L_to_use, H, alpha=alpha, **kwargs)
 
-        if S > cval:  # H0 still rejected, apply elimination criterion
+        # H0 still rejected, apply elimination criterion
+        if S > cval:
             mcs, removed[0, j] = elim_rule(L, mcs, H)
 
         j += 1
@@ -295,7 +296,6 @@ def elim_rule(L: np.array,
 
     combinations = np.arange(0, j).reshape(1, -1)  # TODO why matrix? could be vect
     L_hat = np.zeros(combinations.shape)
-    X = H[:-1, :]
 
     # Estimate
     for j in range(combinations.shape[0]):  # TODO no loop if vect
@@ -305,12 +305,12 @@ def elim_rule(L: np.array,
         for i in range(L_to_use.shape[1] - 1):
             Y_used = L_intra_use[:, i + 1] - L_intra_use[:, i]
             Y_used = Y_used.reshape(-1, 1)
-            deltas[:, i] = (np.linalg.inv(X.T @ X) @ X.T @ Y_used).reshape(-1, )
+            deltas[:, i] = (np.linalg.inv(H.T @ H) @ H.T @ Y_used).reshape(-1, )
 
-        # TODO Check step
         delta_L_hat = (deltas.T @ H[-1, :].T).reshape(-1, 1)
         starting_point = combinations[combinations == 0]  # should always return 1 idx
 
+        # Normalize
         vL_hat = np.zeros(L_hat.shape)
         vL_hat[0, 0] = 1
         for i in range(L_to_use.shape[1] - 1):
@@ -325,4 +325,3 @@ def elim_rule(L: np.array,
     mcs[0, curr_set[0, col].astype(int)] = 0
     removed = curr_set[0, col]
     return mcs, removed
-
