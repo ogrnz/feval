@@ -12,11 +12,11 @@ Mariano, 1995) test. Basically, it allows to do a test of *Conditional* Predicti
 Predictive Ability (like the DM does). It's an asymptotic $\mathcal{X}^2$ test of the null
 
 ```math
-H_0: E[h_t \otimes \Delta L_{t + \tau}],
+H_0: E[h_t \otimes \Delta L_{t + \tau}] = 0,
 ```
 
 where $\tau$ is the forecast horizon and
-$\Delta L_{t + \tau} = (\Delta L_{t + \tau}^{(1)}, \dots, \Delta L_{t + \tau}^{(p)})'$ a ($p \times 1$) vector of
+$\Delta L_{t + \tau} = (\Delta L_{t + \tau}^{(1)}, \dots, \Delta L_{t + \tau}^{(p)})'$ a $(p \times 1)$ vector of
 loss differences, that is $\Delta L_{t + \tau}^{(1)} = \Delta L_{t + \tau}^{(i)} - \Delta L_{t + \tau}^{(i + 1)}$, for
 $i = 1, \dots, p$, for a $(q \times 1)$ test function $h_t$ and the Kronecker product $\otimes$.
 
