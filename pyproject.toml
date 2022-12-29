@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "numpy", "scipy", "arch"]
 dependencies = ["numpy", "scipy", "arch"]
 build-backend = "setuptools.build_meta"
 
@@ -9,7 +9,7 @@ version = "0.0.1"
 authors = [
     { name = "Olivier Grognuz", email = "olivier@grognuz.site" },
 ]
-description = "Perform (multivariate) Diebold-Mariano and (multivariate) Giacomini-White equal (conditional) predictive ability tests along with an Model Confidence Set implementation."
+description = "Perform (multivariate) Diebold-Mariano and (multivariate) Giacomini-White equal (conditional) predictive ability tests along with a Model Confidence Set implementation."
 readme = "README.md"
 requires-python = ">=3.9"
 classifiers = [
