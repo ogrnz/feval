@@ -35,7 +35,7 @@ The neat thing about the MGW test is that it reduces to:
 Hence, it can be used in those 3 cases.
 
 However, the tests give no indication as to *which* method being compared is the best. That is done by the MCS, adapted
-from Hansen (2011). See the `./examples` directory or the ones below.
+from Hansen (2011). See the examples below.
 
 ## Installation
 
@@ -49,6 +49,79 @@ from Hansen (2011). See the `./examples` directory or the ones below.
 ```
 
 ## Examples
+
+Those examples are here to illustrate how to use the package. For realistic examples, see `./examples`.
+
+Unconditional MGW example:
+
+```python
+import numpy as np
+from feval import helpers  # to easily compute losses
+from feval import mgw
+
+T = 100
+F = np.vstack([np.random.rand(T), np.random.rand(T), np.random.rand(T)]).T  # random uniform forecasts [0,1)
+y = np.zeros(T) + 0.5  # Target
+L = helpers.ae(y, F)  # Absolute loss
+
+S, cval, pval = mgw(L)  # Perform the test with default values
+
+# We should get a large p-value, since both forecasts are equally bad at predicting y
+print(pval)  # 0.61 (exact value can change due to randomness)
+# As expected, the null of equal predictive ability is not rejected, 
+# we cannot say that a model is better than another
+```
+
+Unconditional CMCS example:
+
+```python
+import numpy as np
+from feval import helpers  # to easily compute losses
+from feval import cmcs
+
+T = 100
+F = np.vstack(
+    [np.random.rand(T) + 0.5,
+     np.random.rand(T) + 1.0,
+     np.random.rand(T),  # Only this forecast is 'good'
+     np.random.rand(T) - 0.3]).T
+y = np.zeros(T) + 0.5  # Target
+L = helpers.se(y, F)  # Squared loss
+
+# Perform the cmcs with an HAC estimator, the Bartlett kernel and a significance level of 0.01
+mcs, S, cval, pval, removed = cmcs(L, alpha=0.01, covar_style="hac", kernel="Bartlett")
+
+print(mcs)  # [0, 0, 1, 0], only the 3rd model is included in the best set
+```
+
+Conditional MCS:
+
+```python
+import numpy as np
+from feval import helpers  # to easily compute losses
+from feval import cmcs
+
+# Conditional MCS
+T = 101  # Set 1 more to allow 1 lag computation as instrument
+F = np.vstack(
+    [np.random.rand(T),  # This forecast is 'good'
+     np.random.rand(T) + 0.5,
+     np.random.rand(T),  # This forecast is 'good'
+     np.random.rand(T) - 0.5]).T
+y = np.zeros(T) + 0.5  # Target
+L = helpers.se(y, F)  # Squared loss
+
+# Compute instruments as lags of loss differences
+# Instruments useless here, but to illustrate its use
+D = np.diff(L, axis=1)
+D = np.roll(D, 1, axis=0)[:-1]
+H = np.vstack([np.ones(T - 1), D.T]).T  # Instruments, a constant + lags of loss differences
+
+# Perform the cmcs with an HAC estimator with Parzen kernel
+mcs, S, cval, pval, removed = cmcs(L[:-1, :], H=H, covar_style="hac", kernel="Parzen")
+
+print(mcs)  # [1, 0, 1, 0], only the 1st and 3rd models are included in the best set
+```
 
 ## Development
 
