@@ -46,6 +46,9 @@ from Hansen (2011). See the examples below.
 > source ./venv/bin/activate
 # Pip install from git
 > pip install git+https://github.com/ogrnz/feval
+
+# If already installed, you can also upgrade it 
+> pip install --upgrade git+https://github.com/ogrnz/feval
 ```
 
 ## Examples
