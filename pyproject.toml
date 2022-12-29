@@ -1,6 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "numpy", "scipy", "arch"]
-dependencies = ["numpy", "scipy", "arch"]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -17,6 +16,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+dependencies = ["numpy", "scipy", "arch"]
 
 [project.urls]
 "Homepage" = "https://github.com/ogrnz/feval"
