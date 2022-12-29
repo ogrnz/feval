@@ -143,6 +143,11 @@ def mgw(L: np.array,
         raise ValueError("Set `kernel` when using an HAC estimator.")
     if bw is not None and covar_style == "sample":
         raise ValueError(f"{bw=} incompatible with {covar_style=}.")
+    if L.shape[1] < 2:
+        raise ValueError(f"Not enough columns for matrix of  losses {L.shape[1]=}.")
+
+    if kernel_kwargs is None:
+        kernel_kwargs = {}
 
     # Initialize
     T = L.shape[0]
@@ -166,9 +171,7 @@ def mgw(L: np.array,
     omega = np.empty((q * p, q * p))  # Defined here to make linter happy and inform about dims
     if covar_style == "sample":
         omega = (reg - Dbar).T @ (reg - Dbar) / (T - 1)
-
-    # HAC estimator
-    elif covar_style == "hac":
+    elif covar_style == "hac":  # HAC estimator
         if isinstance(kernel, Callable):  # Custom callable
             omega = kernel(reg, **kernel_kwargs)
         elif isinstance(kernel, str):  # Arch covariance
@@ -177,6 +180,8 @@ def mgw(L: np.array,
             omega = ker.cov.long_run
         else:
             raise NotImplementedError
+    else:
+        raise NotImplementedError
 
     # Compute statistic
     dof = q * p
@@ -236,6 +241,9 @@ def cmcs(L: np.array, H: Optional = None, alpha: float = 0.05, **kwargs):
     while S > cval:
         # Create L_to_use, the losses of models still in MCS
         L_to_use = L[:, (mcs == 1)[0]]
+
+        if L_to_use.shape[1] == 1:  # Only 1 model left in set
+            break
 
         # Perform MGW
         S, cval, pval = mgw(L_to_use, H, alpha=alpha, **kwargs)
