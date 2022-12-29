@@ -50,9 +50,11 @@ from Hansen (2011). See the examples below.
 
 ## Examples
 
-Those examples are here to illustrate how to use the package. For realistic examples, see `./examples`.
+Those examples are here to illustrate how to use the package.
 
 Unconditional MGW example:
+
+The forecasts are equally good, on average, and hence have the same predictive ability.
 
 ```python
 import numpy as np
@@ -73,6 +75,7 @@ print(pval)  # 0.61 (exact value can change due to randomness)
 ```
 
 Unconditional CMCS example:
+The best forecast is the 3rd one, it should be the last one in the best set.
 
 ```python
 import numpy as np
@@ -95,6 +98,8 @@ print(mcs)  # [0, 0, 1, 0], only the 3rd model is included in the best set
 ```
 
 Conditional MCS:
+1st and 3rd forecasts are equally good, while the others are biased. Here, the use of instruments is useless, but serves
+as an illustration.
 
 ```python
 import numpy as np
