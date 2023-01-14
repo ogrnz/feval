@@ -17,7 +17,7 @@ H_0: E[h_t \otimes \Delta L_{t + \tau}] = 0,
 
 where $\tau$ is the forecast horizon and
 $\Delta L_{t + \tau} = (\Delta L_{t + \tau}^{(1)}, \dots, \Delta L_{t + \tau}^{(p)})'$ a $(p \times 1)$ vector of
-loss differences, that is $\Delta L_{t + \tau}^{(1)} = \Delta L_{t + \tau}^{(i)} - \Delta L_{t + \tau}^{(i + 1)}$, for
+loss differences, that is $\Delta L_{t + \tau}^{(1)} = L_{t + \tau}^{(i)} - L_{t + \tau}^{(i + 1)}$, for
 $i = 1, \dots, p$, for a $(q \times 1)$ test function $h_t$ and the Kronecker product $\otimes$.
 
 See the references for more information.
