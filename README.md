@@ -138,8 +138,10 @@ print(mcs)  # [1, 0, 1, 0], only the 1st and 3rd models are included in the best
 > python -m venv venv
 # Activate it
 > source ./venv/bin/activate
+# Clone the repo
+> git clone https://github.com/ogrnz/feval
 # Install it in editable mode for your user
-> pip install -e git+https://github.com/ogrnz/feval#egg=feval
+> pip install -U --editable feval 
 ```
 
 Don't forget to test your code with the scripts in `./tests`!
