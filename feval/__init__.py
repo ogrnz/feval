@@ -1,1 +1,1 @@
-from .core import gw, mgw, cmcs, elim_rule, compute_omega
+from .core import gw, mgw, cmcs, elim_rule, compute_covariance

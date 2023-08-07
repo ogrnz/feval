@@ -10,6 +10,7 @@ def gw(
     L: np.array,
     tau: int,
     H: Optional[np.array] = None,
+    covar_style: str = "sample",
     kernel: Optional[Union[str, Callable]] = None,
     bw: Optional[int] = None,
     kernel_kwargs: Optional[dict] = None,
@@ -28,8 +29,12 @@ def gw(
     :param L: (Tx2) array of forecast losses
     :param H: (Txq) array of instruments. If `None` provided, defaults to the unconditional EPA (DM test)
     :param tau: Forecast horizon
+    :param covar_style: (default 'sample')
+        How to compute the covariance matrix.
+        Either the sample covariance ('sample') or an HAC estimator ('hac').
     :param kernel: (default `None`)
-        If multistep forecast (`tau` > 1), covariance matrix is an HAC estimator.
+        If multistep forecast (`tau` > 1), the covariance matrix needs to take
+        into account the correlation structure (`HAC` estimator).
         Original implementation uses a Bartlett kernel with bandwidth `tau - 1`.
         If a `str`, must match one of `arch` package variance estimator:
          > https://arch.readthedocs.io/en/latest/covariance/covariance.html
@@ -46,6 +51,9 @@ def gw(
         cval: critical value for significance lvl,
         pval: p-value of test
     """
+    if kernel_kwargs is None:
+        kernel_kwargs = {}
+
     T, q = L.shape[0], H.shape[1] if H is not None else 1
     d = L[:, 0] - L[:, 1]
 
@@ -56,9 +64,11 @@ def gw(
 
     if tau == 1:  # One-step
         beta = np.linalg.lstsq(reg, np.ones(T), rcond=None)[0][0]
-        S = T * (1 - np.mean((np.ones(T) - beta * reg) ** 2))
+        residuals = np.ones((T, 1)) - (beta * reg)
+        mean_residuals = np.mean(residuals, axis=1)
+        S = T * (1 - np.mean(mean_residuals**2))
     else:  # Multistep
-        omega = compute_omega(reg, kernel, bw, kernel_kwargs)
+        omega = compute_covariance(reg, covar_style, kernel, bw, kernel_kwargs)
         zbar = reg.mean().T
         S = T * zbar.T @ np.linalg.pinv(omega) @ zbar
 
@@ -128,57 +138,20 @@ def mgw(
         cval: float, the corresponding critical value
         pval: float, the p-value of S.
     """
-    # Args checks
-    if kernel is not None and covar_style == "sample":
-        raise ValueError(f"{kernel=} incompatible with {covar_style=}.")
-    if kernel is None and covar_style == "hac":
-        raise ValueError("Set `kernel` when using an HAC estimator.")
-    if bw is not None and covar_style == "sample":
-        raise ValueError(f"{bw=} incompatible with {covar_style=}.")
-    if L.shape[1] < 2:
-        raise ValueError(f"Not enough columns for matrix of  losses {L.shape[1]=}.")
+    validate_args(L, covar_style, kernel, bw)
 
     if kernel_kwargs is None:
         kernel_kwargs = {}
 
-    # Initialize
-    T = L.shape[0]
-    p = L.shape[1] - 1
-    if H is None:  # defaults to unconditional EPA
-        H = np.ones((T, 1))
-
-    # Loss differentials
+    T, p = L.shape[0], L.shape[1] - 1
+    H = np.ones((T, 1)) if H is None else H  # default to unconditional EPA
     D = np.diff(L, axis=1)
-
-    # Conditioning information
-    q = H.shape[1]
-    reg = np.empty((T, q * p))
-
-    for i in range(T):
-        reg[i, :] = np.kron(H[i, :], D[i, :])
+    reg = np.array([np.kron(h, d) for h, d in zip(H, D)])
 
     Dbar = np.mean(reg, axis=0)
+    omega = compute_covariance(reg, Dbar, covar_style, kernel, bw, kernel_kwargs)
 
-    # Compute covar matrix
-    omega = np.empty(
-        (q * p, q * p)
-    )  # Defined here to make linter happy and inform about dims
-    if covar_style == "sample":
-        omega = (reg - Dbar).T @ (reg - Dbar) / (T - 1)
-    elif covar_style == "hac":  # HAC estimator
-        if isinstance(kernel, Callable):  # Custom callable
-            omega = kernel(reg, **kernel_kwargs)
-        elif isinstance(kernel, str):  # Arch covariance
-            kerfunc = getattr(kernels, kernel)
-            ker = kerfunc(reg, bandwidth=bw, **kernel_kwargs)
-            omega = ker.cov.long_run
-        else:
-            raise NotImplementedError
-    else:
-        raise NotImplementedError
-
-    # Compute statistic
-    dof = q * p
+    dof = H.shape[1] * p
     S = (T * Dbar @ np.linalg.pinv(omega) @ Dbar.T).item()
     cval = chi2.ppf(1 - alpha, dof)
     pval = 1 - chi2.cdf(S, dof)
@@ -329,32 +302,52 @@ def elim_rule(L: np.array, mcs: np.array, H: Optional[np.array] = None):
     return mcs, removed
 
 
-def compute_omega(
+def validate_args(L, covar_style, kernel, bw):
+    if kernel and covar_style == "sample":
+        raise ValueError(f"{kernel=} incompatible with {covar_style=}.")
+    if not kernel and covar_style == "hac":
+        raise ValueError("Set `kernel` when using an HAC estimator.")
+    if bw and covar_style == "sample":
+        raise ValueError(f"{bw=} incompatible with {covar_style=}.")
+    if L.shape[1] < 2:
+        raise ValueError(f"Not enough columns for matrix of losses {L.shape[1]=}.")
+
+
+def compute_covariance(
     reg: np.array,
-    kernel: Union[str, Callable],
-    bw: Optional[int],
-    kernel_kwargs: Optional[dict],
+    Dbar: np.array,
+    covar_style: str,
+    kernel: Optional[Union[str, Callable]] = None,
+    bw: Optional[int] = None,
+    kernel_kwargs: Optional[dict] = None,
 ) -> np.array:
     """
     Compute the covariance matrix omega for the given regression residuals and kernel.
 
     :param reg: Residuals from the regression.
+    :param Dbar: Mean of the regression residuals.
+    :param covar_style: How to compute the covariance matrix. Either 'sample' or 'hac'.
     :param kernel:
         The kernel function or name.
         If it's a string, it should match one of the `arch` package variance estimator.
         If it's a callable, it should return a covariance matrix.
     :param bw: Bandwidth for the kernel. If None, the kernel might compute the optimal bandwidth.
     :param kernel_kwargs: Additional keyword arguments to be passed to the kernel function.
-
-    Returns:
-    - np.array: The computed covariance matrix omega.
+    :return np.array: The computed covariance matrix omega.
     """
+    if kernel_kwargs is None:
+        kernel_kwargs = {}
 
-    if callable(kernel):  # Custom callable
-        return kernel(reg, **kernel_kwargs)
-    elif isinstance(kernel, str):  # Arch covariance
-        kerfunc = getattr(kernels, kernel)
-        ker = kerfunc(reg, bandwidth=bw, **kernel_kwargs)
-        return ker.cov.long_run
+    if covar_style == "sample":
+        return (reg - Dbar).T @ (reg - Dbar) / (len(reg) - 1)
+    elif covar_style == "hac":
+        if callable(kernel):
+            return kernel(reg, **kernel_kwargs)
+        elif isinstance(kernel, str) and hasattr(kernels, kernel):  # Arch covariance
+            kerfunc = getattr(kernels, kernel)
+            ker = kerfunc(reg, bandwidth=bw, **kernel_kwargs)
+            return ker.cov.long_run
+        else:
+            raise NotImplementedError("Kernel not recognized or not implemented")
     else:
-        raise NotImplementedError
+        raise ValueError(f"Unsupported covariance style: {covar_style}")
