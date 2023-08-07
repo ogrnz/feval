@@ -1,14 +1,52 @@
-from unittest import TestCase
+import unittest
 
+import arch.covariance.kernel as kernels
 import numpy as np
 import numpy.testing as npt
 
-from feval import gw, mgw, cmcs, elim_rule
+from feval import gw, mgw, cmcs, elim_rule, compute_omega
 from feval import helpers
 from fixtures import data
 
 
-class Test(TestCase):
+class ComputeOmegaTests(unittest.TestCase):
+    def setUp(self):
+        self.reg = np.array(
+            [
+                [0.42706902, 0.38860252],
+                [0.41936226, 0.53305537],
+                [0.05664999, 0.49064741],
+            ]
+        )
+
+    def test_custom_callable_kernel(self):
+        # Simple custom callable that computes covariance
+        def custom_kernel(data, **kwargs):
+            return np.cov(data, rowvar=False)
+
+        omega = compute_omega(self.reg, custom_kernel, None, {})
+        expected_omega = np.cov(self.reg, rowvar=False)
+
+        np.testing.assert_array_almost_equal(omega, expected_omega)
+
+    def test_string_kernel(self):
+        # Using Bartlett kernel as an example from arch package
+        kernel_name = "Bartlett"
+        omega = compute_omega(self.reg, kernel_name, 1, {})
+
+        kerfunc = getattr(kernels, kernel_name)
+        ker = kerfunc(self.reg, bandwidth=1)
+        expected_omega = ker.cov.long_run
+
+        np.testing.assert_array_almost_equal(omega, expected_omega)
+
+    def test_not_implemented_kernel(self):
+        # Testing a kernel type that's neither string nor callable
+        with self.assertRaises(NotImplementedError):
+            compute_omega(self.reg, 12345, None, {})
+
+
+class Test(unittest.TestCase):
     def test_mgw_uni_uncond_noreject(self):
         """
         Equivalent to DM test.
@@ -171,7 +209,9 @@ class Test(TestCase):
         mcs, S, cval, pval, removed = cmcs(L_ae)
 
         npt.assert_array_equal(mcs, np.array([[0, 1, 1]]))
-        npt.assert_array_equal(removed, np.array([[0, 0, 0]]))  # Could lead to unexpected behavior
+        npt.assert_array_equal(
+            removed, np.array([[0, 0, 0]])
+        )  # Could lead to unexpected behavior
 
         F = np.vstack([data.f1, data.f2 + 0.4, data.f3]).T
         L_ae = helpers.ae(data.y, F)
@@ -193,3 +233,7 @@ class Test(TestCase):
 
         npt.assert_array_equal(mcs, np.array([[1, 0, 0]]))
         npt.assert_array_equal(removed, np.array([[1, 2, 0]]))
+
+
+if __name__ == "__main__":
+    unittest.main()
