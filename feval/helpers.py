@@ -51,6 +51,9 @@ def vec_to_col(vec: np.array) -> np.array:
     :param vec: np.array
     :return: column vector
     """
+    if not isinstance(vec, np.ndarray):
+        raise TypeError(f"vec must be an np.ndarray, currently ({type(vec)=})")
+
     if vec.shape == (-1, 1):
         return
     return vec.reshape(-1, 1)
