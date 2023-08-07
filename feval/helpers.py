@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def ae(y_true: np.array, F: np.array):
+def ae(y_true: np.array, F: np.array) -> np.array:
     """
     Compute Absolute Error loss column-wise.
 
@@ -13,7 +13,7 @@ def ae(y_true: np.array, F: np.array):
     return np.abs(y_true - F)
 
 
-def ape(y_true: np.array, F: np.array):
+def ape(y_true: np.array, F: np.array) -> np.array:
     """
     Compute Absolute Percentage Error loss column-wise.
 
@@ -29,7 +29,7 @@ def ape(y_true: np.array, F: np.array):
     return np.abs(y_true - F) / np.maximum(np.abs(y_true), epsilon)
 
 
-def se(y_true: np.array, F: np.array):
+def se(y_true: np.array, F: np.array) -> np.array:
     """
     Compute Squared Error loss column-wise.
 
@@ -43,9 +43,11 @@ def se(y_true: np.array, F: np.array):
 
 def vec_to_col(vec: np.array) -> np.array:
     """
-    Change vector into column vector
+    Convert vector into column vector.
 
     :param vec: np.array
     :return: column vector
     """
+    if vec.shape == (-1, 1):
+        return
     return vec.reshape(-1, 1)
