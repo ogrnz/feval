@@ -4,49 +4,91 @@ import arch.covariance.kernel as kernels
 import numpy as np
 import numpy.testing as npt
 
-from feval import gw, mgw, cmcs, elim_rule, compute_omega
+from feval import gw, mgw, cmcs, elim_rule, compute_covariance
 from feval import helpers
 from fixtures import data
 
 
-class ComputeOmegaTests(unittest.TestCase):
+class ComputeCovarianceTests(unittest.TestCase):
     def setUp(self):
         self.reg = np.array(
             [
                 [0.42706902, 0.38860252],
                 [0.41936226, 0.53305537],
                 [0.05664999, 0.49064741],
+                [0.05664999, 0.29064741],
+                [0.86664999, 0.69064741],
             ]
         )
+        self.Dbar = np.mean(self.reg, axis=0)
 
-    def test_custom_callable_kernel(self):
+    def test_sample_covariance(self):
+        cov_matrix = compute_covariance(self.reg, self.Dbar, covar_style="sample")
+        expected_cov = (
+            (self.reg - self.Dbar).T @ (self.reg - self.Dbar) / (len(self.reg) - 1)
+        )
+        np.testing.assert_array_almost_equal(cov_matrix, expected_cov)
+
+    def test_string_kernel(self):
+        kernel_name = "Bartlett"
+        cov_matrix = compute_covariance(
+            self.reg, self.Dbar, covar_style="hac", kernel=kernel_name, bw=2
+        )
+
+        kerfunc = getattr(kernels, kernel_name)
+        ker = kerfunc(self.reg, bandwidth=2)
+        expected_cov = ker.cov.long_run
+        np.testing.assert_array_almost_equal(cov_matrix, expected_cov)
+
+    def test_callable_kernel(self):
         # Simple custom callable that computes covariance
         def custom_kernel(data, **kwargs):
             return np.cov(data, rowvar=False)
 
-        omega = compute_omega(self.reg, custom_kernel, None, {})
-        expected_omega = np.cov(self.reg, rowvar=False)
+        cov_matrix = compute_covariance(
+            self.reg, self.Dbar, covar_style="hac", kernel=custom_kernel
+        )
+        expected_cov = np.cov(self.reg, rowvar=False)
+        np.testing.assert_array_almost_equal(cov_matrix, expected_cov)
 
-        np.testing.assert_array_almost_equal(omega, expected_omega)
-
-    def test_string_kernel(self):
-        # Using Bartlett kernel as an example from arch package
-        kernel_name = "Bartlett"
-        omega = compute_omega(self.reg, kernel_name, 1, {})
-
-        kerfunc = getattr(kernels, kernel_name)
-        ker = kerfunc(self.reg, bandwidth=1)
-        expected_omega = ker.cov.long_run
-
-        np.testing.assert_array_almost_equal(omega, expected_omega)
-
-    def test_not_implemented_kernel(self):
-        # Testing a kernel type that's neither string nor callable
+    def test_unsupported_kernel_type(self):
         with self.assertRaises(NotImplementedError):
-            compute_omega(self.reg, 12345, None, {})
+            compute_covariance(self.reg, self.Dbar, covar_style="hac", kernel=12345)
+
+    def test_unsupported_covar_style(self):
+        with self.assertRaises(ValueError):
+            compute_covariance(self.reg, self.Dbar, covar_style="unsupported_style")
 
 
-class Test(unittest.TestCase):
+class GWTests(unittest.TestCase):
+    def setUp(self):
+        self.L = np.array(
+            [
+                [0.42706902, 0.38860252, 0.38860252],
+                [0.41936226, 0.41936226, 0.53305537],
+                [0.05664999, 0.5664999, 0.49064741],
+            ]
+        )
+        self.tau = 1
+        self.H = np.array([[1, 1], [1, 1], [1, 1]])
+
+    def test_one_step_without_kernel(self):
+        S, cval, pval = gw(self.L, self.tau, self.H)
+        self.assertIsInstance(S, float)
+        self.assertIsInstance(cval, float)
+        self.assertIsInstance(pval, float)
+
+    def test_multistep_callable_kernel(self):
+        def custom_kernel(data, **kwargs):
+            return np.cov(data, rowvar=False)
+
+        S, cval, pval = gw(self.L, self.tau, self.H, kernel=custom_kernel)
+        self.assertIsInstance(S, float)
+        self.assertIsInstance(cval, float)
+        self.assertIsInstance(pval, float)
+
+
+class MGWTests(unittest.TestCase):
     def test_mgw_uni_uncond_noreject(self):
         """
         Equivalent to DM test.
@@ -157,6 +199,8 @@ class Test(unittest.TestCase):
         self.assertAlmostEqual(S, 8.938482444374896)
         self.assertAlmostEqual(pval, 0.177067449276332)  # not rejecting, as expected
 
+
+class MCSTests(unittest.TestCase):
     def test_mcs_uncond_noreject(self):
         """
         Traditional MCS with MGW.
@@ -193,12 +237,6 @@ class Test(unittest.TestCase):
         self.assertAlmostEqual(cval, 3.841458820694124)
         self.assertAlmostEqual(S, 0.16085093233763528)
         self.assertAlmostEqual(pval, 0.6883742895715335)  # not rejecting, as expected
-
-    def test_mcs_cond(self):
-        """
-        Conditional MCS with MGW.
-        """
-        pass
 
     def test_mcs_order(self):
         """
