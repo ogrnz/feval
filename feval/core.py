@@ -6,13 +6,15 @@ import arch.covariance.kernel as kernels
 from scipy.stats import chi2
 
 
-def gw(L: np.array,
-       tau: int,
-       H: Optional[np.array] = None,
-       kernel: Optional[Union[str, Callable]] = None,
-       bw: Optional[int] = None,
-       kernel_kwargs: Optional[dict] = None,
-       alpha: float = 0.05) -> tuple[float, float, float]:
+def gw(
+    L: np.array,
+    tau: int,
+    H: Optional[np.array] = None,
+    kernel: Optional[Union[str, Callable]] = None,
+    bw: Optional[int] = None,
+    kernel_kwargs: Optional[dict] = None,
+    alpha: float = 0.05,
+) -> tuple[float, float, float]:
     """
     Test of Equal Conditional Predictive Ability by Giacomini and White (2006).
     Used here for testing and debugging but made available through the package interface.
@@ -44,33 +46,21 @@ def gw(L: np.array,
         cval: critical value for significance lvl,
         pval: p-value of test
     """
-    T = L.shape[0]  # Number of observations
-    d = L[:, 0] - L[:, 1]  # Loss differential
-    if H is None:  # Instruments (defaults to unconditional EPA)
-        H = np.ones((T, 1))
-    q = H.shape[1]
+    T, q = L.shape[0], H.shape[1] if H is not None else 1
+    d = L[:, 0] - L[:, 1]
 
-    reg = np.empty(H.shape)
-    for jj in range(H.shape[1]):
-        reg[:, jj] = H[:, jj] * d
+    # Default instruments for unconditional EPA
+    H = np.ones((T, 1)) if H is None else H
+
+    reg = H * d[:, np.newaxis]
 
     if tau == 1:  # One-step
-        beta = np.linalg.lstsq(reg, np.ones(T), rcond=None)[0][0].item()
-        res = np.ones(T) - beta * reg
-        r2 = 1 - np.mean(res ** 2)
-        S = T * r2
+        beta = np.linalg.lstsq(reg, np.ones(T), rcond=None)[0][0]
+        S = T * (1 - np.mean((np.ones(T) - beta * reg) ** 2))
     else:  # Multistep
-        omega = np.empty((q, q))  # Defined here to make linter happy and inform about dims
-        if isinstance(kernel, Callable):  # Custom callable
-            omega = kernel(reg, **kernel_kwargs)
-        elif isinstance(kernel, str):  # Arch covariance
-            kerfunc = getattr(kernels, kernel)
-            ker = kerfunc(reg, bandwidth=bw, **kernel_kwargs)
-            omega = ker.cov.long_run
-        else:
-            raise NotImplementedError
+        omega = compute_omega(reg, kernel, bw, kernel_kwargs)
         zbar = reg.mean().T
-        S = (T * zbar.T * np.linalg.pinv(omega) * zbar).item()
+        S = T * zbar.T @ np.linalg.pinv(omega) @ zbar
 
     dof = reg.shape[1]
     cval = chi2.ppf(1 - alpha, dof)
@@ -79,13 +69,15 @@ def gw(L: np.array,
     return S, cval, pval
 
 
-def mgw(L: np.array,
-        H: Optional = None,
-        covar_style: Literal["sample", "hac"] = "sample",
-        kernel: Optional[Union[str, Callable]] = None,
-        bw: Optional[int] = None,
-        kernel_kwargs: Optional[dict] = None,
-        alpha: float = 0.05):
+def mgw(
+    L: np.array,
+    H: Optional[np.array] = None,
+    covar_style: Literal["sample", "hac"] = "sample",
+    kernel: Optional[Union[str, Callable]] = None,
+    bw: Optional[int] = None,
+    kernel_kwargs: Optional[dict] = None,
+    alpha: float = 0.05,
+):
     """
     Implements the multivariate Giacomini-White (MGW) (Borup et al., 2022) test of equal predictive ability.
 
@@ -168,7 +160,9 @@ def mgw(L: np.array,
     Dbar = np.mean(reg, axis=0)
 
     # Compute covar matrix
-    omega = np.empty((q * p, q * p))  # Defined here to make linter happy and inform about dims
+    omega = np.empty(
+        (q * p, q * p)
+    )  # Defined here to make linter happy and inform about dims
     if covar_style == "sample":
         omega = (reg - Dbar).T @ (reg - Dbar) / (T - 1)
     elif covar_style == "hac":  # HAC estimator
@@ -192,7 +186,7 @@ def mgw(L: np.array,
     return S, cval, pval
 
 
-def cmcs(L: np.array, H: Optional = None, alpha: float = 0.05, **kwargs):
+def cmcs(L: np.array, H: Optional[np.array] = None, alpha: float = 0.05, **kwargs):
     """
     Perform the Conditional Model Confidence Set (CMCS).
     The MCS procedure from Hansen (2011) is adapted to use MGW (Borup et al., 2022)
@@ -257,9 +251,7 @@ def cmcs(L: np.array, H: Optional = None, alpha: float = 0.05, **kwargs):
     return mcs, S, cval, pval, removed
 
 
-def elim_rule(L: np.array,
-              mcs: np.array,
-              H: Optional = None):
+def elim_rule(L: np.array, mcs: np.array, H: Optional[np.array] = None):
     """
     Elimination rule that allows to rank losses based on expected future loss given the information set `H`.
     If `H` is a vector of constant, it amounts to ranking losses based on average loss.
@@ -313,7 +305,9 @@ def elim_rule(L: np.array,
         for i in range(L_to_use.shape[1] - 1):
             Y_used = L_intra_use[:, i + 1] - L_intra_use[:, i]
             Y_used = Y_used.reshape(-1, 1)
-            deltas[:, i] = (np.linalg.inv(H.T @ H) @ H.T @ Y_used).reshape(-1, )
+            deltas[:, i] = (np.linalg.inv(H.T @ H) @ H.T @ Y_used).reshape(
+                -1,
+            )
 
         delta_L_hat = (deltas.T @ H[-1, :].T).reshape(-1, 1)
         starting_point = combinations[combinations == 0]  # should always return 1 idx
@@ -333,3 +327,34 @@ def elim_rule(L: np.array,
     mcs[0, curr_set[0, col].astype(int)] = 0
     removed = curr_set[0, col]
     return mcs, removed
+
+
+def compute_omega(
+    reg: np.array,
+    kernel: Union[str, Callable],
+    bw: Optional[int],
+    kernel_kwargs: Optional[dict],
+) -> np.array:
+    """
+    Compute the covariance matrix omega for the given regression residuals and kernel.
+
+    :param reg: Residuals from the regression.
+    :param kernel:
+        The kernel function or name.
+        If it's a string, it should match one of the `arch` package variance estimator.
+        If it's a callable, it should return a covariance matrix.
+    :param bw: Bandwidth for the kernel. If None, the kernel might compute the optimal bandwidth.
+    :param kernel_kwargs: Additional keyword arguments to be passed to the kernel function.
+
+    Returns:
+    - np.array: The computed covariance matrix omega.
+    """
+
+    if callable(kernel):  # Custom callable
+        return kernel(reg, **kernel_kwargs)
+    elif isinstance(kernel, str):  # Arch covariance
+        kerfunc = getattr(kernels, kernel)
+        ker = kerfunc(reg, bandwidth=bw, **kernel_kwargs)
+        return ker.cov.long_run
+    else:
+        raise NotImplementedError
