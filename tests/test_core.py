@@ -23,16 +23,16 @@ class ComputeCovarianceTests(unittest.TestCase):
         self.Dbar = np.mean(self.reg, axis=0)
 
     def test_sample_covariance(self):
-        cov_matrix = compute_covariance(self.reg, self.Dbar, covar_style="sample")
+        cov_matrix = compute_covariance(self.reg, Dbar=self.Dbar, covar_style="sample")
         expected_cov = (
-            (self.reg - self.Dbar).T @ (self.reg - self.Dbar) / (len(self.reg) - 1)
+                (self.reg - self.Dbar).T @ (self.reg - self.Dbar) / (len(self.reg) - 1)
         )
         np.testing.assert_array_almost_equal(cov_matrix, expected_cov)
 
     def test_string_kernel(self):
         kernel_name = "Bartlett"
         cov_matrix = compute_covariance(
-            self.reg, self.Dbar, covar_style="hac", kernel=kernel_name, bw=2
+            self.reg, Dbar=self.Dbar, covar_style="hac", kernel=kernel_name, bw=2
         )
 
         kerfunc = getattr(kernels, kernel_name)
@@ -46,18 +46,18 @@ class ComputeCovarianceTests(unittest.TestCase):
             return np.cov(data, rowvar=False)
 
         cov_matrix = compute_covariance(
-            self.reg, self.Dbar, covar_style="hac", kernel=custom_kernel
+            self.reg, Dbar=self.Dbar, covar_style="hac", kernel=custom_kernel
         )
         expected_cov = np.cov(self.reg, rowvar=False)
         np.testing.assert_array_almost_equal(cov_matrix, expected_cov)
 
     def test_unsupported_kernel_type(self):
         with self.assertRaises(NotImplementedError):
-            compute_covariance(self.reg, self.Dbar, covar_style="hac", kernel=12345)
+            compute_covariance(self.reg, Dbar=self.Dbar, covar_style="hac", kernel=12345)
 
     def test_unsupported_covar_style(self):
         with self.assertRaises(ValueError):
-            compute_covariance(self.reg, self.Dbar, covar_style="unsupported_style")
+            compute_covariance(self.reg, Dbar=self.Dbar, covar_style="unsupported_style")
 
 
 class GWTests(unittest.TestCase):
