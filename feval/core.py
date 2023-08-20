@@ -66,9 +66,9 @@ def gw(
         beta = np.linalg.lstsq(reg, np.ones(T), rcond=None)[0][0]
         residuals = np.ones((T, 1)) - (beta * reg)
         mean_residuals = np.mean(residuals, axis=1)
-        S = T * (1 - np.mean(mean_residuals**2))
+        S = T * (1 - np.mean(mean_residuals ** 2))
     else:  # Multistep
-        omega = compute_covariance(reg, covar_style, kernel, bw, kernel_kwargs)
+        omega = compute_covariance(reg, covar_style, kernel=kernel, bw=bw, kernel_kwargs=kernel_kwargs)
         zbar = reg.mean().T
         S = T * zbar.T @ np.linalg.pinv(omega) @ zbar
 
@@ -149,7 +149,7 @@ def mgw(
     reg = np.array([np.kron(h, d) for h, d in zip(H, D)])
 
     Dbar = np.mean(reg, axis=0)
-    omega = compute_covariance(reg, Dbar, covar_style, kernel, bw, kernel_kwargs)
+    omega = compute_covariance(reg, covar_style, Dbar=Dbar, kernel=kernel, bw=bw, kernel_kwargs=kernel_kwargs)
 
     dof = H.shape[1] * p
     S = (T * Dbar @ np.linalg.pinv(omega) @ Dbar.T).item()
@@ -314,12 +314,12 @@ def validate_args(L, covar_style, kernel, bw):
 
 
 def compute_covariance(
-    reg: np.array,
-    Dbar: np.array,
-    covar_style: str,
-    kernel: Optional[Union[str, Callable]] = None,
-    bw: Optional[int] = None,
-    kernel_kwargs: Optional[dict] = None,
+        reg: np.array,
+        covar_style: str,
+        Dbar: Optional[np.array] = None,
+        kernel: Optional[Union[str, Callable]] = None,
+        bw: Optional[int] = None,
+        kernel_kwargs: Optional[dict] = None,
 ) -> np.array:
     """
     Compute the covariance matrix omega for the given regression residuals and kernel.
