@@ -311,6 +311,8 @@ def validate_args(L, covar_style, kernel, bw):
         raise ValueError(f"{bw=} incompatible with {covar_style=}.")
     if L.shape[1] < 2:
         raise ValueError(f"Not enough columns for matrix of losses {L.shape[1]=}.")
+    if not isinstance(L, np.ndarray):
+        raise TypeError(f"Only np.ndarray is supported for the loss (currently {type(L)})")
 
 
 def compute_covariance(
