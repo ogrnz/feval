@@ -7,14 +7,14 @@ from scipy.stats import chi2
 
 
 def gw(
-    L: np.array,
-    tau: int,
-    H: Optional[np.array] = None,
-    covar_style: str = "sample",
-    kernel: Optional[Union[str, Callable]] = None,
-    bw: Optional[int] = None,
-    kernel_kwargs: Optional[dict] = None,
-    alpha: float = 0.05,
+        L: np.array,
+        tau: int,
+        H: Optional[np.array] = None,
+        covar_style: str = "sample",
+        kernel: Optional[Union[str, Callable]] = None,
+        bw: Optional[int] = None,
+        kernel_kwargs: Optional[dict] = None,
+        alpha: float = 0.05,
 ) -> tuple[float, float, float]:
     """
     Test of Equal Conditional Predictive Ability by Giacomini and White (2006).
@@ -80,13 +80,13 @@ def gw(
 
 
 def mgw(
-    L: np.array,
-    H: Optional[np.array] = None,
-    covar_style: Literal["sample", "hac"] = "sample",
-    kernel: Optional[Union[str, Callable]] = None,
-    bw: Optional[int] = None,
-    kernel_kwargs: Optional[dict] = None,
-    alpha: float = 0.05,
+        L: np.array,
+        H: Optional[np.array] = None,
+        covar_style: Literal["sample", "hac"] = "sample",
+        kernel: Optional[Union[str, Callable]] = None,
+        bw: Optional[int] = None,
+        kernel_kwargs: Optional[dict] = None,
+        alpha: float = 0.05,
 ):
     """
     Implements the multivariate Giacomini-White (MGW) (Borup et al., 2022) test of equal predictive ability.
@@ -102,7 +102,7 @@ def mgw(
         it reduces to multivariate Diebold-Mariano (MDM) (Mariano and Preve, 2012)
 
     References:
-        - Borup, Daniel and Eriksen, Jonas Nygaard and Kjær, Mads Markvart and Thyrsgaard, Martin,
+        - Borup, Daniel and Eriksen, Jonas Nygaard and Kjaer, Mads Markvart and Thyrsgaard, Martin,
         Predicting Bond Return Predictability. Available at http://dx.doi.org/10.2139/ssrn.3513340
         - Diebold, F.X., and R.S. Mariano (1995) ‘Comparing Predictive Accuracy,’ Journal
         of Business and Economic Statistics 13, 253–263.
@@ -172,7 +172,7 @@ def cmcs(L: np.array, H: Optional[np.array] = None, alpha: float = 0.05, **kwarg
     Borup (https://sites.google.com/view/danielborup/research)
 
     References:
-        - Borup, Daniel and Eriksen, Jonas Nygaard and Kjær, Mads Markvart and Thyrsgaard, Martin,
+        - Borup, Daniel and Eriksen, Jonas Nygaard and Kjaer, Mads Markvart and Thyrsgaard, Martin,
         Predicting Bond Return Predictability. Available at http://dx.doi.org/10.2139/ssrn.3513340
         - Hansen, P. R., Lunde, A., & Nason, J. M. (2011). The model confidence set. Econometrica, 79(2), 453-497.
 
@@ -234,7 +234,7 @@ def elim_rule(L: np.array, mcs: np.array, H: Optional[np.array] = None):
     Borup (https://sites.google.com/view/danielborup/research)
 
     References:
-        - Borup, Daniel and Eriksen, Jonas Nygaard and Kjær, Mads Markvart and Thyrsgaard, Martin,
+        - Borup, Daniel and Eriksen, Jonas Nygaard and Kjaer, Mads Markvart and Thyrsgaard, Martin,
         Predicting Bond Return Predictability. Available at http://dx.doi.org/10.2139/ssrn.3513340
         - Hansen, P. R., Lunde, A., & Nason, J. M. (2011). The model confidence set. Econometrica, 79(2), 453-497.
 
