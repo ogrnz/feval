@@ -68,7 +68,9 @@ def gw(
         mean_residuals = np.mean(residuals, axis=1)
         S = T * (1 - np.mean(mean_residuals**2))
     else:  # Multistep
-        omega = compute_covariance(reg, covar_style, kernel, bw, kernel_kwargs)
+        omega = compute_covariance(
+            reg, covar_style, kernel=kernel, bw=bw, kernel_kwargs=kernel_kwargs
+        )
         zbar = reg.mean().T
         S = T * zbar.T @ np.linalg.pinv(omega) @ zbar
 
@@ -102,7 +104,7 @@ def mgw(
         it reduces to multivariate Diebold-Mariano (MDM) (Mariano and Preve, 2012)
 
     References:
-        - Borup, Daniel and Eriksen, Jonas Nygaard and Kjær, Mads Markvart and Thyrsgaard, Martin,
+        - Borup, Daniel and Eriksen, Jonas Nygaard and Kjaer, Mads Markvart and Thyrsgaard, Martin,
         Predicting Bond Return Predictability. Available at http://dx.doi.org/10.2139/ssrn.3513340
         - Diebold, F.X., and R.S. Mariano (1995) ‘Comparing Predictive Accuracy,’ Journal
         of Business and Economic Statistics 13, 253–263.
@@ -149,7 +151,9 @@ def mgw(
     reg = np.array([np.kron(h, d) for h, d in zip(H, D)])
 
     Dbar = np.mean(reg, axis=0)
-    omega = compute_covariance(reg, Dbar, covar_style, kernel, bw, kernel_kwargs)
+    omega = compute_covariance(
+        reg, covar_style, Dbar=Dbar, kernel=kernel, bw=bw, kernel_kwargs=kernel_kwargs
+    )
 
     dof = H.shape[1] * p
     S = (T * Dbar @ np.linalg.pinv(omega) @ Dbar.T).item()
@@ -172,7 +176,7 @@ def cmcs(L: np.array, H: Optional[np.array] = None, alpha: float = 0.05, **kwarg
     Borup (https://sites.google.com/view/danielborup/research)
 
     References:
-        - Borup, Daniel and Eriksen, Jonas Nygaard and Kjær, Mads Markvart and Thyrsgaard, Martin,
+        - Borup, Daniel and Eriksen, Jonas Nygaard and Kjaer, Mads Markvart and Thyrsgaard, Martin,
         Predicting Bond Return Predictability. Available at http://dx.doi.org/10.2139/ssrn.3513340
         - Hansen, P. R., Lunde, A., & Nason, J. M. (2011). The model confidence set. Econometrica, 79(2), 453-497.
 
@@ -193,23 +197,20 @@ def cmcs(L: np.array, H: Optional[np.array] = None, alpha: float = 0.05, **kwarg
         removed: (1xk) np.array where a column represents an algorithm cycle.
             That way, we can see which model index was removed at which iteration.
     """
-    # Initialize
-    T = L.shape[0]
-    k = L.shape[1]
-    if H is None:
-        H = np.ones((T, 1))
+    T, k = L.shape
 
-    # Init loop
+    H = np.ones((T, 1)) if H is None else H
+
     S, cval, pval = np.inf, 1, 1
     mcs = np.ones((1, k))
     removed = np.zeros((1, k))
 
     j = 0
     while S > cval:
-        # Create L_to_use, the losses of models still in MCS
-        L_to_use = L[:, (mcs == 1)[0]]
+        L_to_use = L[:, mcs[0].astype(bool)]
 
-        if L_to_use.shape[1] == 1:  # Only 1 model left in set
+        # If only one model left in the set, exit loop
+        if L_to_use.shape[1] == 1:
             break
 
         # Perform MGW
@@ -234,7 +235,7 @@ def elim_rule(L: np.array, mcs: np.array, H: Optional[np.array] = None):
     Borup (https://sites.google.com/view/danielborup/research)
 
     References:
-        - Borup, Daniel and Eriksen, Jonas Nygaard and Kjær, Mads Markvart and Thyrsgaard, Martin,
+        - Borup, Daniel and Eriksen, Jonas Nygaard and Kjaer, Mads Markvart and Thyrsgaard, Martin,
         Predicting Bond Return Predictability. Available at http://dx.doi.org/10.2139/ssrn.3513340
         - Hansen, P. R., Lunde, A., & Nason, J. M. (2011). The model confidence set. Econometrica, 79(2), 453-497.
 
@@ -311,12 +312,18 @@ def validate_args(L, covar_style, kernel, bw):
         raise ValueError(f"{bw=} incompatible with {covar_style=}.")
     if L.shape[1] < 2:
         raise ValueError(f"Not enough columns for matrix of losses {L.shape[1]=}.")
+    if not isinstance(L, np.ndarray):
+        raise TypeError(
+            f"Only np.ndarray is supported for the loss (currently {type(L)})."
+        )
+    if np.isnan(L).sum() > 0:
+        raise ValueError("Ensure there are no NaN in your loss matrix.")
 
 
 def compute_covariance(
     reg: np.array,
-    Dbar: np.array,
     covar_style: str,
+    Dbar: Optional[np.array] = None,
     kernel: Optional[Union[str, Callable]] = None,
     bw: Optional[int] = None,
     kernel_kwargs: Optional[dict] = None,
