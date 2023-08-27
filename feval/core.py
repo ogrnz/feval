@@ -207,10 +207,10 @@ def cmcs(L: np.array, H: Optional[np.array] = None, alpha: float = 0.05, **kwarg
 
     j = 0
     while S > cval:
-        # Create L_to_use, the losses of models still in MCS
-        L_to_use = L[:, (mcs == 1)[0]]
+        L_to_use = L[:, mcs[0].astype(bool)]
 
-        if L_to_use.shape[1] == 1:  # Only 1 model left in set
+        # If only one model left in the set, exit loop
+        if L_to_use.shape[1] == 1:
             break
 
         # Perform MGW
