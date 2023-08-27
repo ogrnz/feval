@@ -25,7 +25,7 @@ class ComputeCovarianceTests(unittest.TestCase):
     def test_sample_covariance(self):
         cov_matrix = compute_covariance(self.reg, Dbar=self.Dbar, covar_style="sample")
         expected_cov = (
-                (self.reg - self.Dbar).T @ (self.reg - self.Dbar) / (len(self.reg) - 1)
+            (self.reg - self.Dbar).T @ (self.reg - self.Dbar) / (len(self.reg) - 1)
         )
         np.testing.assert_array_almost_equal(cov_matrix, expected_cov)
 
@@ -53,11 +53,15 @@ class ComputeCovarianceTests(unittest.TestCase):
 
     def test_unsupported_kernel_type(self):
         with self.assertRaises(NotImplementedError):
-            compute_covariance(self.reg, Dbar=self.Dbar, covar_style="hac", kernel=12345)
+            compute_covariance(
+                self.reg, Dbar=self.Dbar, covar_style="hac", kernel=12345
+            )
 
     def test_unsupported_covar_style(self):
         with self.assertRaises(ValueError):
-            compute_covariance(self.reg, Dbar=self.Dbar, covar_style="unsupported_style")
+            compute_covariance(
+                self.reg, Dbar=self.Dbar, covar_style="unsupported_style"
+            )
 
 
 class GWTests(unittest.TestCase):
@@ -238,7 +242,7 @@ class MCSTests(unittest.TestCase):
         self.assertAlmostEqual(S, 0.16085093233763528)
         self.assertAlmostEqual(pval, 0.6883742895715335)  # not rejecting, as expected
 
-    def test_mcs_order(self):
+    def test_mcs_order_011(self):
         """
         Traditional MCS with MGW, testing ordering.
         """
@@ -251,6 +255,7 @@ class MCSTests(unittest.TestCase):
             removed, np.array([[0, 0, 0]])
         )  # Could lead to unexpected behavior
 
+    def test_mcs_order_101(self):
         F = np.vstack([data.f1, data.f2 + 0.4, data.f3]).T
         L_ae = helpers.ae(data.y, F)
         mcs, S, cval, pval, removed = cmcs(L_ae)
@@ -258,6 +263,7 @@ class MCSTests(unittest.TestCase):
         npt.assert_array_equal(mcs, np.array([[1, 0, 1]]))
         npt.assert_array_equal(removed, np.array([[1, 0, 0]]))
 
+    def test_mcs_order_110(self):
         F = np.vstack([data.f1, data.f2, data.f3 + 0.4]).T
         L_ae = helpers.ae(data.y, F)
         mcs, S, cval, pval, removed = cmcs(L_ae)
@@ -265,6 +271,7 @@ class MCSTests(unittest.TestCase):
         npt.assert_array_equal(mcs, np.array([[1, 1, 0]]))
         npt.assert_array_equal(removed, np.array([[2, 0, 0]]))
 
+    def test_mcs_order_100(self):
         F = np.vstack([data.f1, data.f2 + 0.4, data.f3 + 0.4]).T
         L_ae = helpers.ae(data.y, F)
         mcs, S, cval, pval, removed = cmcs(L_ae)
