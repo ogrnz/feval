@@ -7,14 +7,14 @@ from scipy.stats import chi2
 
 
 def gw(
-        L: np.array,
-        tau: int,
-        H: Optional[np.array] = None,
-        covar_style: str = "sample",
-        kernel: Optional[Union[str, Callable]] = None,
-        bw: Optional[int] = None,
-        kernel_kwargs: Optional[dict] = None,
-        alpha: float = 0.05,
+    L: np.array,
+    tau: int,
+    H: Optional[np.array] = None,
+    covar_style: str = "sample",
+    kernel: Optional[Union[str, Callable]] = None,
+    bw: Optional[int] = None,
+    kernel_kwargs: Optional[dict] = None,
+    alpha: float = 0.05,
 ) -> tuple[float, float, float]:
     """
     Test of Equal Conditional Predictive Ability by Giacomini and White (2006).
@@ -66,9 +66,11 @@ def gw(
         beta = np.linalg.lstsq(reg, np.ones(T), rcond=None)[0][0]
         residuals = np.ones((T, 1)) - (beta * reg)
         mean_residuals = np.mean(residuals, axis=1)
-        S = T * (1 - np.mean(mean_residuals ** 2))
+        S = T * (1 - np.mean(mean_residuals**2))
     else:  # Multistep
-        omega = compute_covariance(reg, covar_style, kernel=kernel, bw=bw, kernel_kwargs=kernel_kwargs)
+        omega = compute_covariance(
+            reg, covar_style, kernel=kernel, bw=bw, kernel_kwargs=kernel_kwargs
+        )
         zbar = reg.mean().T
         S = T * zbar.T @ np.linalg.pinv(omega) @ zbar
 
@@ -80,13 +82,13 @@ def gw(
 
 
 def mgw(
-        L: np.array,
-        H: Optional[np.array] = None,
-        covar_style: Literal["sample", "hac"] = "sample",
-        kernel: Optional[Union[str, Callable]] = None,
-        bw: Optional[int] = None,
-        kernel_kwargs: Optional[dict] = None,
-        alpha: float = 0.05,
+    L: np.array,
+    H: Optional[np.array] = None,
+    covar_style: Literal["sample", "hac"] = "sample",
+    kernel: Optional[Union[str, Callable]] = None,
+    bw: Optional[int] = None,
+    kernel_kwargs: Optional[dict] = None,
+    alpha: float = 0.05,
 ):
     """
     Implements the multivariate Giacomini-White (MGW) (Borup et al., 2022) test of equal predictive ability.
@@ -149,7 +151,9 @@ def mgw(
     reg = np.array([np.kron(h, d) for h, d in zip(H, D)])
 
     Dbar = np.mean(reg, axis=0)
-    omega = compute_covariance(reg, covar_style, Dbar=Dbar, kernel=kernel, bw=bw, kernel_kwargs=kernel_kwargs)
+    omega = compute_covariance(
+        reg, covar_style, Dbar=Dbar, kernel=kernel, bw=bw, kernel_kwargs=kernel_kwargs
+    )
 
     dof = H.shape[1] * p
     S = (T * Dbar @ np.linalg.pinv(omega) @ Dbar.T).item()
@@ -193,13 +197,10 @@ def cmcs(L: np.array, H: Optional[np.array] = None, alpha: float = 0.05, **kwarg
         removed: (1xk) np.array where a column represents an algorithm cycle.
             That way, we can see which model index was removed at which iteration.
     """
-    # Initialize
-    T = L.shape[0]
-    k = L.shape[1]
-    if H is None:
-        H = np.ones((T, 1))
+    T, k = L.shape
 
-    # Init loop
+    H = np.ones((T, 1)) if H is None else H
+
     S, cval, pval = np.inf, 1, 1
     mcs = np.ones((1, k))
     removed = np.zeros((1, k))
@@ -312,18 +313,20 @@ def validate_args(L, covar_style, kernel, bw):
     if L.shape[1] < 2:
         raise ValueError(f"Not enough columns for matrix of losses {L.shape[1]=}.")
     if not isinstance(L, np.ndarray):
-        raise TypeError(f"Only np.ndarray is supported for the loss (currently {type(L)}).")
+        raise TypeError(
+            f"Only np.ndarray is supported for the loss (currently {type(L)})."
+        )
     if np.isnan(L).sum() > 0:
         raise ValueError("Ensure there are no NaN in your loss matrix.")
 
 
 def compute_covariance(
-        reg: np.array,
-        covar_style: str,
-        Dbar: Optional[np.array] = None,
-        kernel: Optional[Union[str, Callable]] = None,
-        bw: Optional[int] = None,
-        kernel_kwargs: Optional[dict] = None,
+    reg: np.array,
+    covar_style: str,
+    Dbar: Optional[np.array] = None,
+    kernel: Optional[Union[str, Callable]] = None,
+    bw: Optional[int] = None,
+    kernel_kwargs: Optional[dict] = None,
 ) -> np.array:
     """
     Compute the covariance matrix omega for the given regression residuals and kernel.
