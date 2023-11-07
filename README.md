@@ -39,6 +39,8 @@ from Hansen (2011). See the examples below.
 
 ## Installation
 
+Tested from **python >=3.9**.
+
 ```bash
 # Create virtual environment
 > python -m venv venv
